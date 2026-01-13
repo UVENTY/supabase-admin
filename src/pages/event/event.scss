@@ -1,0 +1,20 @@
+.eventForm {
+  .ant-row:last-child {
+    .ant-form-item {
+      margin-bottom: 0;
+    }
+  }
+
+  .scheme_blob {
+    margin-bottom: 0;
+  }
+
+  .ant-form-item-label > label {
+    height: auto !important;
+  }
+}
+
+.eventCollapse .ant-collapse-content-box {
+  padding-left: 20px !important;
+  padding-right: 20px !important;
+}

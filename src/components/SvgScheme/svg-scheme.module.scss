@@ -1,0 +1,65 @@
+.svgContainer {
+  svg {
+    width: 100%;
+    height: auto;
+
+    * {
+      font-family: 'Courier New', Courier, monospace;
+    }
+  }
+}
+
+.svg-scheme-hover {
+  stroke-width: 3px;
+}
+
+.preview {
+  background-color: #343433;
+  border-radius: 6px;
+  padding: 8px;
+  color: #fff;
+  box-shadow: 0px 4px 4px 0px #0000000D;
+
+  .block {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .price {
+    font-size: 18px;
+  }
+
+  .icon {
+    svg {
+      width: 18px;
+      height: 18px;
+    }
+  }
+
+  .row, .seat {
+    span {
+      color: #999;
+    }
+  }
+
+  .footer {
+    margin: 6px -8px 0;
+    border-top: 1px solid #666;
+    padding-top: 6px;
+  }
+}
+
+.svgSchemeTooltip {
+  position: absolute;
+  transform: translate(-45%, -100%);
+  opacity: 0;
+  left: -500px;
+  top: -500px;
+  transition: ease .3s opacity;
+  background-color: #2E2E2D;
+}
+
+.scheme {
+  position: relative;
+}

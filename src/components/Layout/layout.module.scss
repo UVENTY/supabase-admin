@@ -1,0 +1,82 @@
+.toolbar {
+  display: flex;
+  gap: 20px;
+}
+.headerUser {
+  display: inline-block;
+  margin-left: 10px;
+}
+
+.topNavbar {
+  margin-right: 100px;
+  li {
+    font-size: 16px;
+    font-weight: 400;
+
+    &:after {
+      left: 0 !important;
+      right: 0 !important;
+    }
+  }
+}
+
+.subnav {
+  overflow: hidden;
+  height: 0;
+  transition: ease .3s height;
+  border-radius: 9px !important;
+
+  &_visible {
+    height: 52px;
+  }
+}
+
+.filters {
+  padding: 10px;
+  background-color: #fff;
+}
+.sidebar {
+  flex: 0 0 100px;
+  padding: 0 20px;
+
+  &__buttons {
+    button {
+      padding: 10px 0 6px 0 !important;
+      margin-bottom: 10px;
+      height: auto !important;
+
+      :global(.ant-btn-icon) {
+        display: block;
+        margin-bottom: 3px;
+        margin-inline-end: 0 !important;
+      }
+    }
+  }
+
+  &__sticky > div {
+    position: sticky;
+    top: 80px;
+  }
+}
+.content {
+  display: flex;
+  margin-top: 20px;
+}
+.header {
+  background: transparent;
+  position: sticky;
+  top: 0;
+  z-index: 101;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: stretch;
+  padding: 0;
+  box-shadow: var(--ant-box-shadow-secondary);
+  background-color: #fff;
+}
+:global(.ant-menu-overflow + .ant-menu-overflow) {
+  flex: 1 1 0;
+  justify-content: flex-end;
+  padding-right: 100px;
+}
