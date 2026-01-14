@@ -84,7 +84,7 @@ export async function getConfig() {
         cities: formatAsObject(cities.data, 'id_city'),
         countries: formatAsObject(countries.data, 'ISO 3166-1 alpha-2 code'),
         lang_vls: {}, 
-        default_currency: 'USD' 
+        default_currency: 'EUR' 
       },
       error: null
     }

@@ -118,11 +118,6 @@ export async function fetchTicketsFromSupabase(params) {
   }
 }
 
-/**
- * Получает данные о покупках (orders) из Supabase для билетов
- * @param {Array} tickets - Массив билетов с id_order
- * @returns {Object} Объект с данными о заказах в формате { data: { booking: { [buy_id]: { b_payment_datetime, ... } } } }
- */
 export async function fetchTicketsPaymentDataFromSupabase(tickets = []) {
   const orderIds = tickets
     .map(ticket => ticket.id_order)

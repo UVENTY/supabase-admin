@@ -3,20 +3,6 @@ import { renameKeys } from '../utils'
 const isArray = Array.isArray
 const entries = Object.entries
 
-/**
- * @typedef {Object} Ticket
- * @property {string} event_id - Event ID
- * @property {string} hall_id - Hall ID
- * @property {string} date_start - Start date
- * @property {string} section - Section
- * @property {string} row - Row
- * @property {number} seat - Seat
- * @property {number} price - Price
- * @property {string} currency - Currency
- *
- * @param {*} data
- * @returns {Ticket[]} Array of tickets
- */
 export const selectFlatArray = data =>
   Object.values(data.trip).reduce((tickets, group) => {
     const commonData = renameKeys({

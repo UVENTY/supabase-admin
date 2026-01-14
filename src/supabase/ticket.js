@@ -1,13 +1,5 @@
 import { supabase } from './client'
 
-/**
- * Генерирует уникальный код для билета
- * Формат: {id_trip}-{id_trip_seat}-{8_случайных_символов}
- * Пример: 44-6-22431ea8
- * @param {number} tripId - ID рейса (id_trip)
- * @param {number} tripSeatId - Порядковый номер места в рейсе (id_trip_seat)
- * @returns {string} Уникальный код билета
- */
 function generateTicketCode(tripId, tripSeatId) {
   const chars = '0123456789abcdefghijklmnopqrstuvwxyz'
   let randomPart = ''
@@ -18,11 +10,6 @@ function generateTicketCode(tripId, tripSeatId) {
   return `${tripId}-${tripSeatId}-${randomPart}`
 }
 
-/**
- * Генерирует QR код для билета
- * @param {string} code - Код билета
- * @returns {Promise<string>} Base64 строка QR кода
- */
 async function generateQRCode(code) {
   try {
     const { qrBase64 } = await import('../utils/utils')
@@ -62,13 +49,6 @@ export async function getTicketsBySchedule(scheduleId, filters = {}) {
   }
 }
 
-/**
- * Вернуть билет в продажу (для купленных/зарезервированных билетов)
- * @param {number} tripId - ID рейса (id_trip)
- * @param {string} idSeat - ID места в формате "hall_id;section;row;seat"
- * @param {number|null} orderId - ID заказа (если билет был куплен)
- * @returns {Promise<{data: any, error: any}>}
- */
 export async function returnTicketToSale(tripId, idSeat, orderId = null) {
   try {
     const { data: ticket, error: ticketError } = await supabase
@@ -196,12 +176,6 @@ export async function returnTicketToSale(tripId, idSeat, orderId = null) {
   }
 }
 
-/**
- * Убрать билет из продажи
- * @param {number} tripId - ID рейса (id_trip)
- * @param {string} idSeat - ID места в формате "hall_id;section;row;seat"
- * @returns {Promise<{data: any, error: any}>}
- */
 export async function removeTicketFromSale(tripId, idSeat) {
   try {
     const { data: ticket, error: ticketError } = await supabase

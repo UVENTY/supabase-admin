@@ -18,7 +18,7 @@ import { createPromocode, updatePromocode } from '../../supabase/promocode'
 import { supabase } from '../../supabase/client'
 import SvgSchemeEditor from '../../components/SvgSchemeEditor'
 import Sidebar from '../../components/Layout/sidebar'
-import { getCitiesOptions, getCountriesOptions, getLangValue } from '../../redux/config'
+import { getCitiesOptions, getCountriesOptions, getLangValue, getCurrencyList, getDefaultCurrency } from '../../redux/config'
 import { downloadBlob, jsonBase64, qrBase64, toBase64 } from '../../utils/utils'
 import './event.scss'
 import { EMPTY_ARRAY, NON_SEAT_ROW } from '../../consts'
@@ -284,6 +284,8 @@ export default function EventForm() {
 
   const cities = useSelector(getCitiesOptions)
   const countries = useSelector(getCountriesOptions)
+  const currencyList = useSelector(getCurrencyList)
+  const defaultCurrency = useSelector(getDefaultCurrency)
 
   const stadiumIdRef = useRef(null)
   const stadiumId = !isNew && data?.event?.stadium 
@@ -318,7 +320,11 @@ export default function EventForm() {
   }, [stadium?.scheme])
 
   const initialValues = useMemo(() => {
-    if (isNew) return {}
+    if (isNew) {
+      return {
+        currency: defaultCurrency
+      }
+    }
     if (!data?.event || Object.keys(data.event).length === 0) return {}
     
     const eventData = {
@@ -327,7 +333,8 @@ export default function EventForm() {
       date: data.event.date,
       time: data.event.time,
       fee: data.event.fee,
-      stripe_account: data.event.id_stripe_account
+      stripe_account: data.event.id_stripe_account,
+      currency: data.event.currency || defaultCurrency
     }
     
     Object.keys(eventData).forEach(key => {
@@ -352,7 +359,7 @@ export default function EventForm() {
       ...eventData,
       stadium: stadiumData
     }
-  }, [isNew, data?.event, parsedScheme])
+  }, [isNew, data?.event, parsedScheme, defaultCurrency])
   
   useEffect(() => {
     if (isNew || !parsedScheme || !data?.event?.stadium) return
@@ -834,12 +841,17 @@ export default function EventForm() {
               await updateSchedule(id, updateEventData)
               
               const hallId = stadiumId || data?.event?.stadium?.id || data?.event?.id_stadium
+              
+              const oldCurrency = data?.event?.currency
+              const newCurrency = event.currency
+              const currencyChanged = newCurrency && oldCurrency !== newCurrency
+              
               if (id && hallId) {
                 const ticketsToUpdate = tickets?.data 
                   ? expandNonSeats(changedPrice, tickets.data)
                   : changedPrice
                 
-                if (Object.keys(ticketsToUpdate).length > 0) {
+                if (Object.keys(ticketsToUpdate).length > 0 || currencyChanged) {
                   const { createOrUpdateTickets } = await import('../../supabase/tickets')
                   const ticketsResult = await createOrUpdateTickets(id, hallId, ticketsToUpdate)
                   
@@ -1155,6 +1167,39 @@ export default function EventForm() {
                       })) || []}
                       style={{ width: '100%' }}
                     />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item
+                    label='Currency'
+                    name='currency'
+                    tooltip='Валюта для билетов этого события'
+                  >
+                    <Select
+                      placeholder='Select currency'
+                      style={{ width: '100%' }}
+                      showSearch
+                      filterOption={(input, option) => {
+                        const label = option?.label || option?.children || ''
+                        const value = option?.value || ''
+                        const searchText = input.toLowerCase()
+                        return (
+                          String(label).toLowerCase().includes(searchText) ||
+                          String(value).toLowerCase().includes(searchText)
+                        )
+                      }}
+                    >
+                      {currencyList.map(currency => (
+                        <Select.Option
+                          key={currency.code}
+                          value={currency.code}
+                          label={`${currency.code} ${currency.en || currency.name_en || ''}`}
+                          title={currency.en || currency.name_en || currency.code}
+                        >
+                          {currency.code} {currency.en || currency.name_en ? `(${currency.en || currency.name_en})` : ''}
+                        </Select.Option>
+                      ))}
+                    </Select>
                   </Form.Item>
                 </Col>
               </Row>

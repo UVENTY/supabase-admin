@@ -1,13 +1,5 @@
 import { supabase } from './client'
 
-/**
- * Генерирует уникальный код для билета
- * Формат: {id_trip}-{id_trip_seat}-{8_случайных_символов}
- * Пример: 44-6-22431ea8
- * @param {number} tripId - ID рейса (id_trip)
- * @param {number} tripSeatId - Порядковый номер места в рейсе (id_trip_seat)
- * @returns {string} Уникальный код билета
- */
 function generateTicketCode(tripId, tripSeatId) {
   const chars = '0123456789abcdefghijklmnopqrstuvwxyz'
   let randomPart = ''
@@ -18,11 +10,6 @@ function generateTicketCode(tripId, tripSeatId) {
   return `${tripId}-${tripSeatId}-${randomPart}`
 }
 
-/**
- * Генерирует QR код для билета
- * @param {string} code - Код билета
- * @returns {Promise<string>} Base64 строка QR кода
- */
 async function generateQRCode(code) {
   try {
     const { qrBase64 } = await import('../utils/utils')
@@ -33,13 +20,6 @@ async function generateQRCode(code) {
   }
 }
 
-/**
- * Создать билеты для события из схемы стадиона
- * @param {number} eventId - ID события
- * @param {number} stadiumId - ID стадиона
- * @param {object} ticketsData - Объект с билетами в формате { "hall_id;section;row;seat": price }
- * @returns {Promise<{data: any, error: any}>}
- */
 export async function createOrUpdateTickets(eventId, stadiumId, ticketsData) {
   try {
 
@@ -113,6 +93,37 @@ export async function createOrUpdateTickets(eventId, stadiumId, ticketsData) {
 
     const tripId = trip.id_trip
 
+    let eventCurrency = 'EUR' 
+    try {
+      const { data: scheduleData } = await supabase
+        .from('schedule')
+        .select('currency')
+        .eq('id_schedule', eventId)
+        .single()
+      
+      if (scheduleData?.currency) {
+        eventCurrency = scheduleData.currency
+      } else {
+        const { data: tripData } = await supabase
+          .from('trip')
+          .select('currency')
+          .eq('id_trip', tripId)
+          .single()
+        
+        if (tripData?.currency) {
+          eventCurrency = tripData.currency
+        }
+      }
+    } catch (error) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.warn('Не удалось получить валюту из события/trip, используем EUR по умолчанию:', error)
+      }
+    }
+
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`💰 Используем валюту для билетов: ${eventCurrency}`)
+    }
+
     const { data: existingTicketsMap } = await supabase
       .from('ticket')
       .select('id_seat, id_trip_seat, id_trip')
@@ -176,7 +187,8 @@ export async function createOrUpdateTickets(eventId, stadiumId, ticketsData) {
         ticketsToUpdate.push({
           id_seat: idSeat,
           id_schedule: eventId,
-          tariff: ticketPrice
+          tariff: ticketPrice,
+          currency: eventCurrency
         })
       } else {
         const currentTripSeatId = tripSeatCounter++
@@ -203,7 +215,7 @@ export async function createOrUpdateTickets(eventId, stadiumId, ticketsData) {
         id_trip: ticket.tripId,
         id_trip_seat: ticket.tripSeatCounter,
         tariff: ticket.ticketPrice,
-        currency: 'USD', 
+        currency: eventCurrency, 
         section: ticket.section,
         block: ticket.row, 
         row: ticket.row,
@@ -241,7 +253,10 @@ export async function createOrUpdateTickets(eventId, stadiumId, ticketsData) {
         const batchStartIndex = i
         const updatePromises = await Promise.all(batch.map(async (ticket, batchIndex) => {
           const existingTicket = existingTicketsMap[ticket.id_seat]
-          const updateData = { tariff: ticket.tariff }
+          const updateData = { 
+            tariff: ticket.tariff,
+            currency: eventCurrency
+          }
           
           if (!existingTicket?.code || !existingTicket?.code_qr_base64) {
             let ticketCode = existingTicket?.code
@@ -249,7 +264,9 @@ export async function createOrUpdateTickets(eventId, stadiumId, ticketsData) {
               ticketCode = generateTicketCode(existingTicket.id_trip, existingTicket.id_trip_seat)
             } else if (!ticketCode) {
               const localCounter = tripSeatCounter + batchStartIndex + batchIndex 
-              console.warn('⚠️ Could not generate ticket code: missing id_trip or id_trip_seat for ticket', ticket.id_seat)
+              if (process.env.NODE_ENV !== 'production') {
+                console.warn('⚠️ Could not generate ticket code: missing id_trip or id_trip_seat for ticket', ticket.id_seat)
+              }
               ticketCode = generateTicketCode(tripId, localCounter)
             }
             const qrCodeBase64 = existingTicket?.code_qr_base64 || await generateQRCode(ticketCode)
@@ -278,7 +295,46 @@ export async function createOrUpdateTickets(eventId, stadiumId, ticketsData) {
         updatedCount += batch.length
       }
       
-      console.log(`✅ Updated ${updatedCount} tickets successfully`)
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`✅ Updated ${updatedCount} tickets successfully`)
+      }
+    }
+
+    if (eventCurrency) {
+      const { data: allEventTickets, error: allTicketsError } = await supabase
+        .from('ticket')
+        .select('id_seat, currency')
+        .eq('id_schedule', eventId)
+      
+      if (!allTicketsError && allEventTickets && allEventTickets.length > 0) {
+        const ticketsWithWrongCurrency = allEventTickets.filter(t => t.currency !== eventCurrency)
+        
+        if (ticketsWithWrongCurrency.length > 0) {
+          if (process.env.NODE_ENV !== 'production') {
+            console.log(`🔄 Обновляем валюту для ${ticketsWithWrongCurrency.length} билетов события...`)
+          }
+          
+          const BATCH_SIZE = 100
+          for (let i = 0; i < ticketsWithWrongCurrency.length; i += BATCH_SIZE) {
+            const batch = ticketsWithWrongCurrency.slice(i, i + BATCH_SIZE)
+            const seatKeys = batch.map(t => t.id_seat)
+            
+            const { error: currencyUpdateError } = await supabase
+              .from('ticket')
+              .update({ currency: eventCurrency })
+              .eq('id_schedule', eventId)
+              .in('id_seat', seatKeys)
+            
+            if (currencyUpdateError) {
+              console.error(`❌ Ошибка обновления валюты для билетов:`, currencyUpdateError)
+            }
+          }
+          
+          if (process.env.NODE_ENV !== 'production') {
+            console.log(`✅ Валюта обновлена для ${ticketsWithWrongCurrency.length} билетов`)
+          }
+        }
+      }
     }
 
     if (ticketsToDelete.length > 0) {

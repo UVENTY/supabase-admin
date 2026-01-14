@@ -4,19 +4,6 @@ import { selectFlatArray } from './selector'
 import { fetchTickets } from './request'
 
 export const useEvents = ({ event_id, extend } = {}, fn = {}, queryOptions = {}) => {
-  // let queryFn = fetchTickets(renameKeys({ event_id: 'key' }, { event_id }))
-  /* if (extend) {
-    const fns = extend.map(key => {
-
-    })
-    queryFn = waterfall([
-      async function(cb) {
-        const res = await queryFn
-        cb(null, res)
-      },
-      
-    ])
-  } */
 
   return useQuery({
     ...queryOptions,
@@ -30,13 +17,6 @@ export const useEvents = ({ event_id, extend } = {}, fn = {}, queryOptions = {})
     )
   })
 }
-/**
- * @param { object } options
- * @param { string } options.event_id
- * @param { string } options.hall_id
- * @param { Ticket[] } options.tickets
- * @returns { import('@tanstack/react-query').UseMutationResult }
- */
 const useCreate = (options) => {
   const { event_id, hall_id, tickets } = options
   if (!event_id || !hall_id) throw new Error('Не переданы обязательные параметры')
@@ -68,4 +48,3 @@ export default {
   useFetch: useTickets,
   useCreate
 }
-

@@ -1,14 +1,3 @@
-/**
- * @typedef { Object } Ticket
- * @property { string } category - категория места
- * @property { string } row - ряд
- * @property { string } seat - место
- * @property { number } count - количество билетов (для категорий без местНу )
- * @property { number } price - цена
- * @property { string } currency - валюта
- */
-
-
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { filter, group, order, pipe, renameKeys } from '../utils'
 import { selectFlatArray } from './selector'
@@ -20,18 +9,6 @@ export default (function() {
   const eventTrip = {}
   const eventTickets = {}
 
-  /**
-   * @param { object } options
-   * @param { string } options.event_id - id мероприятия, для которого получаем билеты
-   * @param { number } options.skip - кол-во пропущенных с начала списка записей 
-   * @param { number } options.limit - ограничение по количеству выбираемых записей
-   * @param { object } fn
-   * @param { Function } fn.filter - функция фильтрации данных
-   * @param { Function } fn.order - функция сортировки данных
-   * @param { Function } fn.group - функция группировки данных
-   * @param { import('@tanstack/react-query').UseQueryOptions } queryOptions
-   * @returns { import('@tanstack/react-query').UseQueryResult }
-   */
   const useTickets = (options = {}, fn = {}, { select, ...queryOptions } = {}) => {
     const { event_id, ...params } = options || {}
     return useQuery({
@@ -53,14 +30,6 @@ export default (function() {
     })
   }
   
-  /**
-   * @param { object } options
-   * @param { string } options.event_id
-   * @param { string } options.hall_id
-   * @param { string } options.row
-   * @param { object } options.tickets
-   * @returns { import('@tanstack/react-query').UseMutationResult }
-   */
   const updateTickets = (options) => {
     const { event_id, hall_id, category, row, tickets } = options
     if (!event_id || !hall_id) throw new Error('Не переданы обязательные параметры')
