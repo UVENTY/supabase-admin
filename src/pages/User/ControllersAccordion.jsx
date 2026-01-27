@@ -27,9 +27,14 @@ export default function ControllersAccordion({ eventId }) {
 
       let filteredData = data || []
       if (eventId) {
+        // Для существующего события: показываем контролёров без id_schedule (для всех событий) 
+        // или с id_schedule равным текущему событию
         filteredData = filteredData.filter(user => 
           !user.id_schedule || user.id_schedule === Number(eventId)
         )
+      } else {
+        // Для нового события: показываем только контролёров без id_schedule (для всех событий)
+        filteredData = filteredData.filter(user => !user.id_schedule)
       }
 
       setControllers(filteredData)

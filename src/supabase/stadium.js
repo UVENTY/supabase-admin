@@ -43,18 +43,11 @@ export async function getStadiumById(id) {
 
 export async function createStadium(stadiumData) {
   try {
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('📡 Creating stadium via Supabase...', stadiumData)
-    }
 
     let schemeLink = ''
     if (stadiumData.scheme_blob && typeof stadiumData.scheme_blob === 'string') {
       if (stadiumData.scheme_blob.length <= 255) {
         schemeLink = stadiumData.scheme_blob
-      } else {
-        if (process.env.NODE_ENV !== 'production') {
-          console.info(`ℹ️ scheme_blob слишком длинный (${stadiumData.scheme_blob.length} символов), сохраняем только в scheme`)
-        }
       }
     }
     
@@ -96,9 +89,6 @@ export async function createStadium(stadiumData) {
       throw error
     }
 
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('✅ Stadium created successfully:', data.id_stadium)
-    }
     return { data, error: null }
   } catch (error) {
     console.error('Create stadium error:', error)
@@ -108,45 +98,21 @@ export async function createStadium(stadiumData) {
 
 export async function updateStadium(id, stadiumData) {
   try {
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('📡 Updating stadium via Supabase...', id, stadiumData)
-    }
     
     let schemeLink = ''
     if (stadiumData.scheme_blob && typeof stadiumData.scheme_blob === 'string') {
       if (stadiumData.scheme_blob.length <= 255) {
         schemeLink = stadiumData.scheme_blob
-      } else {
-        if (process.env.NODE_ENV !== 'production') {
-          console.info(`ℹ️ scheme_blob слишком длинный (${stadiumData.scheme_blob.length} символов), сохраняем только в scheme`)
-        }
       }
     }
     
     let schemeValue = stadiumData.scheme || ''
     
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('🔍 Processing scheme in updateStadium:', {
-        hasScheme: !!stadiumData.scheme,
-        schemeType: typeof stadiumData.scheme,
-        isObject: typeof stadiumData.scheme === 'object' && stadiumData.scheme !== null,
-        schemeKeys: typeof stadiumData.scheme === 'object' && stadiumData.scheme !== null ? Object.keys(stadiumData.scheme) : null
-      })
-    }
     
     if (typeof schemeValue === 'object' && schemeValue !== null) {
       schemeValue = JSON.stringify(schemeValue).replaceAll('"', '\'')
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('✅ Converted scheme object to string, length:', schemeValue.length)
-      }
     } else if (typeof schemeValue === 'string') {
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('ℹ️ Scheme is already a string, length:', schemeValue.length)
-      }
     } else {
-      if (process.env.NODE_ENV !== 'production') {
-        console.warn('⚠️ Scheme is empty or has unexpected type:', typeof schemeValue)
-      }
       schemeValue = ''
     }
 
@@ -170,12 +136,6 @@ export async function updateStadium(id, stadiumData) {
 
     Object.keys(updateData).forEach(key => {
       if (key === 'scheme') {
-        if (process.env.NODE_ENV !== 'production') {
-          console.log('✅ Keeping scheme field:', {
-            length: updateData[key]?.length || 0,
-            isEmpty: !updateData[key] || updateData[key] === ''
-          })
-        }
         return
       }
       if (updateData[key] === null || updateData[key] === undefined || updateData[key] === '') {
@@ -183,13 +143,6 @@ export async function updateStadium(id, stadiumData) {
       }
     })
     
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('📤 Final updateData:', {
-        hasScheme: !!updateData.scheme,
-        schemeLength: updateData.scheme?.length || 0,
-        schemePreview: updateData.scheme ? updateData.scheme.substring(0, 100) + '...' : 'empty'
-      })
-    }
 
     const { data, error } = await supabase
       .from('stadium')
@@ -203,9 +156,6 @@ export async function updateStadium(id, stadiumData) {
       throw error
     }
 
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('✅ Stadium updated successfully:', data.id_stadium)
-    }
     return { data, error: null }
   } catch (error) {
     console.error('Update stadium error:', error)

@@ -96,7 +96,8 @@ export default function SvgSchemeEditSeat({
   const values = useMemo(() => mapValues(
     seats.reduce((acc, el) => {
       const data = Object.assign({}, el.dataset)
-      const keys = ['category'].concat(fieldsToShow.map(f => f.value))
+      // Всегда включаем row и seat для правильного определения типа места
+      const keys = ['category', 'row', 'seat'].concat(fieldsToShow.map(f => f.value))
       keys.forEach(field => {
         const val = data[field] || null
         if (!acc[field]) acc[field] = [val]
@@ -108,6 +109,12 @@ export default function SvgSchemeEditSeat({
   ), [seats, fieldsToShow])
 
   const { disabled, category, row, seat, price, count, busyCount } = values
+  
+  // Проверяем, есть ли у выбранных мест row и seat (для обычных мест)
+  // Если row и seat - массивы, проверяем, что хотя бы одно место имеет row и seat
+  const hasRowAndSeat = Array.isArray(row) ? row.some(r => r && r !== '-1' && r !== null && r !== '') : (row && row !== '-1' && row !== null && row !== '')
+  const hasSeat = Array.isArray(seat) ? seat.some(s => s && s !== null && s !== '') : (seat && seat !== null && seat !== '')
+  const isRegularSeat = hasRowAndSeat && hasSeat
   
   const isDisabled = disabled === 'true'
   const ticket = tickets.find(item => String(item.section) === String(category) && (String(item.row) === '-1' || (String(item.row) === String(row) && String(item.seat) === String(seat))))
@@ -242,15 +249,17 @@ export default function SvgSchemeEditSeat({
           </Flex>}
       />
       <Flex className={s.row3} gap={20}>
-        {!!row && <div>
-          <label className={s.label}>Row</label>
-          <Input value={row ?? ''} disabled />
-        </div>}
-        {!!seat && <div>
-          <label className={s.label}>Seat</label>
-          <Input value={seat ?? ''} disabled />
-        </div>}
-        {!row && !seat && <>
+        {isRegularSeat && <>
+          {!!row && <div>
+            <label className={s.label}>Row</label>
+            <Input value={Array.isArray(row) ? row.join(', ') : (row ?? '')} disabled />
+          </div>}
+          {!!seat && <div>
+            <label className={s.label}>Seat</label>
+            <Input value={Array.isArray(seat) ? seat.join(', ') : (seat ?? '')} disabled />
+          </div>}
+        </>}
+        {!isRegularSeat && <>
           <div>
             <label className={s.label}>Booking / sold</label>
             <InputNumber value={seats.length === 1 ? inputBusyCount : (typeof busyCount === 'number' ? busyCount : '')} style={{ width: '100%' }} disabled />

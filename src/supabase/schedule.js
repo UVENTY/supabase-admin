@@ -77,9 +77,6 @@ export async function getScheduleById(id) {
 
 export async function createSchedule(scheduleData) {
   try {
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('📡 Creating schedule via Supabase...', scheduleData)
-    }
     
     if (!scheduleData.team1) {
       throw new Error('Team1 is required')
@@ -117,9 +114,6 @@ export async function createSchedule(scheduleData) {
       throw error
     }
 
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('✅ Schedule created successfully:', data.id_schedule)
-    }
     return { data, error: null }
   } catch (error) {
     console.error('Create schedule error:', error)
@@ -129,9 +123,6 @@ export async function createSchedule(scheduleData) {
 
 export async function updateSchedule(id, scheduleData) {
   try {
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('📡 Updating schedule via Supabase...', id, scheduleData)
-    }
     
     const updateData = {
       team1: scheduleData.team1 || null,
@@ -174,9 +165,6 @@ export async function updateSchedule(id, scheduleData) {
       throw error
     }
 
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('✅ Schedule updated successfully:', data.id_schedule)
-    }
     return { data, error: null }
   } catch (error) {
     console.error('Update schedule error:', error)
