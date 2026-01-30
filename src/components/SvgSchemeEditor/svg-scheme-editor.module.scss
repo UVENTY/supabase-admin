@@ -1,5 +1,9 @@
 .root {
   position: relative;
+  
+  &.viewMode {
+    padding-top: 70px; // Отступ сверху для кнопок в режиме просмотра
+  }
 }
 
 .addIcon,
@@ -48,6 +52,10 @@
   }
 }
 
+.form {
+  width: 100%;
+}
+
 .scheme {
   position: relative;
   flex: 1 1 auto;
@@ -58,8 +66,21 @@
   }
 }
 
+.schemeFullWidth {
+  position: relative;
+  width: 100%;
+  margin-right: 0;
+  flex: 1 1 100%;
+
+  svg {
+    border-radius: 10px;
+  }
+}
+
 .params {
-  flex: 0 0 420px;
+  flex: 0 0 450px;
+  min-width: 0;
+  overflow: visible;
 
   :global(.ant-btn-circle) {
     min-width: 0 !important;
@@ -67,6 +88,11 @@
 
   :global(.ant-input-number) {
     width: 100%;
+  }
+
+  :global(.ant-card) {
+    width: 100%;
+    max-width: 100%;
   }
 }
 

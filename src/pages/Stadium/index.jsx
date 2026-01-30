@@ -10,7 +10,7 @@ import InputImage from '../../components/InputImage'
 import MultilangInput from '../../components/MultilangInput'
 import StadiumScheme from '../../components/StadiumScheme'
 import { fetchData, getStadium, getStadiumSchemeStatus, fetchStadiumScheme } from '../../redux/data'
-import { getCities, getCountries } from '../../redux/config'
+import { getCities, getCountries, getCitiesOptions } from '../../redux/config'
 import { createStadium, updateStadium } from '../../supabase/stadium'
 import SvgSchemeEditor from '../../components/SvgSchemeEditor'
 import { toBase64 } from '../../utils/utils'
@@ -36,6 +36,7 @@ export default function PageStadium() {
   const isLoading = useSelector(state => state.data.isLoading)
   const cities = useSelector(getCities)
   const countries = useSelector(getCountries)
+  const citiesOptions = useSelector(getCitiesOptions)
   const stadium = useSelector(state => getStadium(state, id))
   const schemeStatus = useSelector(state => getStadiumSchemeStatus(state, id))
   const queryClient = useQueryClient()
@@ -43,7 +44,30 @@ export default function PageStadium() {
   const [ form ] = Form.useForm()
 
   const countriesOptions = useMemo(() => getOptions(countries), [countries])
-  const citiesOptions = useMemo(() => getOptions(cities), [cities])
+  
+  // Получаем выбранную страну из формы для фильтрации городов
+  const selectedCountry = Form.useWatch('country', form)
+  
+  // Фильтруем города по выбранной стране
+  const filteredCitiesOptions = useMemo(() => {
+    if (!selectedCountry) {
+      return citiesOptions
+    }
+    // Фильтруем города, которые принадлежат выбранной стране
+    return citiesOptions.filter(city => {
+      // Получаем данные города из объекта cities
+      const cityId = city.value || city.id
+      const cityData = cities?.[cityId]
+      if (!cityData) return false
+      
+      // Поле country в таблице city содержит код страны (ISO 3166-1 alpha-2 code)
+      // Например: 'RU', 'US', 'GB', 'CY' (Cyprus), 'HR' (Croatia)
+      const cityCountry = cityData.country
+      
+      // Сравниваем код страны города с выбранной страной (приводим к верхнему регистру для сравнения)
+      return cityCountry && cityCountry.toUpperCase() === String(selectedCountry).toUpperCase()
+    })
+  }, [citiesOptions, selectedCountry, cities])
 
   useEffect(() => {
     if (isNew) return
@@ -224,6 +248,10 @@ export default function PageStadium() {
               options={countriesOptions}
               style={{ width: '100%' }}
               showSearch
+              onChange={(value) => {
+                // При смене страны очищаем выбранный город
+                form.setFieldsValue({ city: null })
+              }}
             />
           </Form.Item>
         </Col>
@@ -241,7 +269,7 @@ export default function PageStadium() {
               filterOption={(input, option) =>
                 (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
               }
-              options={citiesOptions}
+              options={filteredCitiesOptions}
               style={{ width: '100%' }}
               showSearch
             />

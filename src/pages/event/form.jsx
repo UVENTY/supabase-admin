@@ -2,7 +2,7 @@ import { get } from 'lodash'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useState, useRef } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { fetchData, fetchStadiumScheme, setStadiumScheme, setStadiumSchemeStatus, getStadium, getStadiumSchemeStatus } from '../../redux/data'
+import { fetchData, fetchStadiumScheme, setStadiumScheme, setStadiumSchemeStatus, getStadium, getStadiumSchemeStatus, setData } from '../../redux/data'
 import { useParams, useNavigate } from 'react-router-dom'
 import { keyBy } from 'lodash'
 import dayjs from 'dayjs'
@@ -18,7 +18,7 @@ import { createPromocode, updatePromocode } from '../../supabase/promocode'
 import { supabase } from '../../supabase/client'
 import SvgSchemeEditor from '../../components/SvgSchemeEditor'
 import Sidebar from '../../components/Layout/sidebar'
-import { getCitiesOptions, getCountriesOptions, getLangValue, getCurrencyList, getDefaultCurrency } from '../../redux/config'
+import { getCitiesOptions, getCountriesOptions, getLangValue, getCurrencyList, getDefaultCurrency, getCities } from '../../redux/config'
 import { downloadBlob, jsonBase64, qrBase64, toBase64 } from '../../utils/utils'
 import './event.scss'
 import { EMPTY_ARRAY, NON_SEAT_ROW } from '../../consts'
@@ -282,42 +282,110 @@ export default function EventForm() {
   const [ changedPrice, setChangedPrice ] = useState({})
   const [statusMap, setStatusMap] = useState({})
 
-  const cities = useSelector(getCitiesOptions)
+  const citiesOptionsBase = useSelector(getCitiesOptions)
+  const citiesData = useSelector(getCities)
   const countries = useSelector(getCountriesOptions)
   const currencyList = useSelector(getCurrencyList)
   const defaultCurrency = useSelector(getDefaultCurrency)
+  
+  // Получаем выбранную страну из формы для фильтрации городов
+  const selectedCountry = Form.useWatch(['stadium', 'country'], form)
+  
+  // Фильтруем города по выбранной стране
+  const citiesOptions = useMemo(() => {
+    if (!selectedCountry) {
+      return citiesOptionsBase || []
+    }
+    // Фильтруем города, которые принадлежат выбранной стране
+    return (citiesOptionsBase || []).filter(city => {
+      // Получаем данные города из объекта citiesData
+      const cityId = city.value || city.id
+      const cityData = citiesData?.[cityId]
+      if (!cityData) return false
+      
+      // Поле country в таблице city содержит код страны (ISO 3166-1 alpha-2 code)
+      // Например: 'RU', 'US', 'GB', 'CY' (Cyprus), 'HR' (Croatia)
+      const cityCountry = cityData.country
+      
+      // Сравниваем код страны города с выбранной страной (приводим к верхнему регистру для сравнения)
+      return cityCountry && cityCountry.toUpperCase() === String(selectedCountry).toUpperCase()
+    })
+  }, [citiesOptionsBase, selectedCountry, citiesData])
+  
+  const [cities, setCities] = useState(citiesOptions || [])
+  
+  // Обновляем список городов при изменении опций из Redux или выбранной страны
+  useEffect(() => {
+    if (citiesOptions && citiesOptions.length >= 0) {
+      // Убеждаемся, что все значения - строки для режима tags
+      const citiesWithStringValues = citiesOptions.map(city => ({
+        ...city,
+        value: String(city.value || city.id || '')
+      }))
+      setCities(citiesWithStringValues)
+    }
+  }, [citiesOptions])
 
+  const [selectedStadiumId, setSelectedStadiumId] = useState(null)
+  
   const stadiumIdRef = useRef(null)
   const stadiumId = !isNew && data?.event?.stadium 
     ? (data.event.stadium.id || data.event.stadium.id_stadium || data.event.stadium) 
-    : null
+    : (selectedStadiumId || null)
   
-  const stadiumFromRedux = useSelector(state => !isNew && stadiumId ? getStadium(state, stadiumId) : null)
-  const schemeStatusFromRedux = useSelector(state => !isNew && stadiumId ? getStadiumSchemeStatus(state, stadiumId) : null)
+  const stadiumFromRedux = useSelector(state => stadiumId ? getStadium(state, stadiumId) : null)
+  const schemeStatusFromRedux = useSelector(state => stadiumId ? getStadiumSchemeStatus(state, stadiumId) : null)
   
   const stadium = stadiumFromRedux
   const schemeStatus = schemeStatusFromRedux
   
   useEffect(() => {
-    if (isNew || !stadiumId) return
-    if (['loading', 'loaded'].includes(schemeStatus)) return
-    if (stadiumIdRef.current === stadiumId) return 
+    if (!stadiumId) return
+    if (schemeStatus === 'loading') return
+    if (stadiumIdRef.current === stadiumId && schemeStatus === 'loaded') return 
     
     stadiumIdRef.current = stadiumId
     dispatch(fetchStadiumScheme(stadiumId))
-  }, [isNew, stadiumId, schemeStatus, dispatch])
+  }, [stadiumId, schemeStatus, dispatch])
   
   const parsedScheme = useMemo(() => {
     if (!stadium?.scheme) return undefined
     try {
+      let schemeData
       if (typeof stadium.scheme === 'string') {
-        return JSON.parse(stadium.scheme.replaceAll('\'', '"'))
+        schemeData = JSON.parse(stadium.scheme.replaceAll('\'', '"'))
+      } else {
+        schemeData = stadium.scheme
       }
-      return stadium.scheme
+      
+      // Убеждаемся, что схема имеет правильную структуру
+      // Если это объект с полем scheme (SVG строка), возвращаем как есть
+      // Если это просто SVG строка, оборачиваем в объект
+      if (schemeData && typeof schemeData === 'object' && schemeData.scheme) {
+        return schemeData
+      } else if (typeof schemeData === 'string') {
+        // Если это просто SVG строка, оборачиваем в объект
+        return { scheme: schemeData, categories: [], customProps: [] }
+      }
+      return schemeData
     } catch (e) {
+      console.error('Error parsing stadium scheme:', e)
       return undefined
     }
   }, [stadium?.scheme])
+  
+  // Отслеживаем изменение схемы и обновляем форму
+  useEffect(() => {
+    if (!isNew || !selectedStadiumId) return
+    if (schemeStatus !== 'loaded') return
+    if (!parsedScheme) return
+    
+    form.setFieldsValue({
+      stadium: {
+        scheme_blob: parsedScheme
+      }
+    })
+  }, [isNew, selectedStadiumId, parsedScheme, schemeStatus, form])
 
   const initialValues = useMemo(() => {
     if (isNew) {
@@ -370,6 +438,20 @@ export default function EventForm() {
       }
     })
   }, [isNew, parsedScheme, data?.event?.stadium, form, stadiumId])
+  
+  // Устанавливаем выбранный стадион при редактировании существующего события
+  useEffect(() => {
+    if (isNew || !data?.event?.stadium) return
+    
+    const eventStadiumId = data.event.stadium.id || data.event.stadium.id_stadium || data.event.stadium
+    if (eventStadiumId && !selectedStadiumId) {
+      setSelectedStadiumId(eventStadiumId)
+      form.setFieldsValue({
+        selected_stadium_id: eventStadiumId
+      })
+    }
+  }, [isNew, data?.event?.stadium, selectedStadiumId, form])
+  
 
   const { isLoading: isLoadingUsers, data: usersMap } = useQuery({
     queryKey: ['usersMap'],
@@ -908,38 +990,77 @@ export default function EventForm() {
               setIsSending(false)
               return
             }
-            const countryId = typeof stadium.country === 'object' ? stadium.country?.id || stadium.country?.value : stadium.country
-            const cityId = typeof stadium.city === 'object' ? stadium.city?.id || stadium.city?.value : stadium.city
+            // Если выбран существующий стадион, используем его ID
+            let stadiumId = selectedStadiumId
             
-            let schemeValue = stadium.scheme || ''
-            
-            if (scheme_blob && typeof scheme_blob === 'object' && scheme_blob.scheme) {
-              schemeValue = scheme_blob 
+            if (!stadiumId) {
+              // Создаем новый стадион
+              const countryId = typeof stadium.country === 'object' ? stadium.country?.id || stadium.country?.value : stadium.country
+              const cityId = typeof stadium.city === 'object' ? stadium.city?.id || stadium.city?.value : stadium.city
+              
+              let schemeValue = stadium.scheme || ''
+              
+              if (scheme_blob && typeof scheme_blob === 'object' && scheme_blob.scheme) {
+                schemeValue = scheme_blob 
+              }
+              
+              const stadiumData = {
+                en: stadium.en || stadium.name_en || '',
+                ru: stadium.ru || stadium.name_ru || '',
+                ar: stadium.ar || stadium.name_ar || '',
+                fr: stadium.fr || stadium.name_fr || '',
+                es: stadium.es || stadium.name_es || '',
+                address_en: stadium.address_en || '',
+                address_ru: stadium.address_ru || '',
+                address_ar: stadium.address_ar || '',
+                address_fr: stadium.address_fr || '',
+                address_es: stadium.address_es || '',
+                country: countryId || null,
+                city: cityId || null,
+                scheme: schemeValue,
+                scheme_blob: await jsonBase64(scheme_blob)
+              }
+              
+              const createdStadiumResult = await createStadium(stadiumData)
+              if (createdStadiumResult.error) {
+                messageApi.error(`Ошибка при создании стадиона: ${createdStadiumResult.error.message}`)
+                return
+              }
+              stadiumId = createdStadiumResult.data.id_stadium
+            } else {
+              // Обновляем существующий стадион, если были изменения
+              const countryId = typeof stadium.country === 'object' ? stadium.country?.id || stadium.country?.value : stadium.country
+              const cityId = typeof stadium.city === 'object' ? stadium.city?.id || stadium.city?.value : stadium.city
+              
+              let schemeValue = stadium.scheme || ''
+              
+              if (scheme_blob && typeof scheme_blob === 'object' && scheme_blob.scheme) {
+                schemeValue = scheme_blob 
+              }
+              
+              const stadiumData = {
+                en: stadium.en || stadium.name_en || '',
+                ru: stadium.ru || stadium.name_ru || '',
+                ar: stadium.ar || stadium.name_ar || '',
+                fr: stadium.fr || stadium.name_fr || '',
+                es: stadium.es || stadium.name_es || '',
+                address_en: stadium.address_en || '',
+                address_ru: stadium.address_ru || '',
+                address_ar: stadium.address_ar || '',
+                address_fr: stadium.address_fr || '',
+                address_es: stadium.address_es || '',
+                country: countryId || null,
+                city: cityId || null,
+                scheme: schemeValue,
+                scheme_blob: await jsonBase64(scheme_blob)
+              }
+              
+              const updateResult = await updateStadium(stadiumId, stadiumData)
+              if (updateResult?.error) {
+                messageApi.error(`Ошибка при обновлении стадиона: ${updateResult.error.message}`)
+                return
+              }
             }
-            
-            const stadiumData = {
-              en: stadium.en || stadium.name_en || '',
-              ru: stadium.ru || stadium.name_ru || '',
-              ar: stadium.ar || stadium.name_ar || '',
-              fr: stadium.fr || stadium.name_fr || '',
-              es: stadium.es || stadium.name_es || '',
-              address_en: stadium.address_en || '',
-              address_ru: stadium.address_ru || '',
-              address_ar: stadium.address_ar || '',
-              address_fr: stadium.address_fr || '',
-              address_es: stadium.address_es || '',
-              country: countryId || null,
-              city: cityId || null,
-              scheme: schemeValue,
-              scheme_blob: await jsonBase64(scheme_blob)
-            }
-            
-            const createdStadiumResult = await createStadium(stadiumData)
-            if (createdStadiumResult.error) {
-              messageApi.error(`Ошибка при создании стадиона: ${createdStadiumResult.error.message}`)
-              return
-            }
-            const stadiumId = createdStadiumResult.data.id_stadium
             
             const eventData = { 
               ...event,
@@ -1210,6 +1331,76 @@ export default function EventForm() {
               label: <b>Location</b>,
               style: panelStyle,
               children: <>
+                <Row gutter={20} style={{ marginBottom: 20 }}>
+                  <Col span={24}>
+                    <Form.Item label='Выберите стадион' name='selected_stadium_id'>
+                      <Select
+                        placeholder='Выберите существующий стадион'
+                        allowClear
+                        showSearch
+                        filterOption={(input, option) =>
+                          (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                        }
+                        options={data?.options?.s || []}
+                        onChange={(value) => {
+                          if (value === null || value === undefined) {
+                            // Очищаем поля при сбросе выбора
+                            setSelectedStadiumId(null)
+                            form.setFieldsValue({
+                              stadium: {
+                                en: '',
+                                country: null,
+                                city: null,
+                                address_en: '',
+                                scheme_blob: null
+                              }
+                            })
+                          } else {
+                            // Выбран существующий стадион
+                            setSelectedStadiumId(value)
+                            
+                            // Получаем данные стадиона из всех источников
+                            const queryStadiums = queryData?.data?.stadiums || {}
+                            const allStadiums = { ...reduxStadiums, ...queryStadiums }
+                            const selectedStadium = allStadiums[value]
+                            
+                            if (selectedStadium) {
+                              // Убеждаемся, что стадион есть в Redux перед загрузкой схемы
+                              // Если стадиона нет в Redux, добавляем его через setData
+                              if (!reduxStadiums[value]) {
+                                dispatch(setData({
+                                  stadiums: {
+                                    [value]: {
+                                      ...selectedStadium,
+                                      id_stadium: value,
+                                      id: value
+                                    }
+                                  }
+                                }))
+                              }
+                              
+                              // Загружаем схему стадиона
+                              stadiumIdRef.current = null
+                              dispatch(fetchStadiumScheme(value))
+                              
+                              // Заполняем поля формы
+                              form.setFieldsValue({
+                                stadium: {
+                                  en: selectedStadium.name_en || selectedStadium.en || '',
+                                  country: selectedStadium.country || null,
+                                  city: selectedStadium.id_city || selectedStadium.city || null,
+                                  address_en: selectedStadium.address_en || '',
+                                  scheme_blob: null // Будет заполнено после загрузки схемы
+                                }
+                              })
+                            }
+                          }
+                        }}
+                        style={{ width: '100%' }}
+                      />
+                    </Form.Item>
+                  </Col>
+                </Row>
                 <Row gutter={20}>
                   <Col span={6}>
                     <Form.Item label='Name' name={['stadium', 'en']}>
@@ -1226,6 +1417,11 @@ export default function EventForm() {
                         options={countries}
                         style={{ width: '100%' }}
                         showSearch
+                        onChange={(value) => {
+                          // При смене страны очищаем выбранный город
+                          const stadiumValues = form.getFieldsValue('stadium') || {}
+                          form.setFieldsValue({ stadium: { ...stadiumValues, city: null } })
+                        }}
                       />
                     </Form.Item>
                   </Col>
@@ -1236,7 +1432,7 @@ export default function EventForm() {
                         filterOption={(input, option) =>
                           (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
                         }
-                        options={cities}
+                        options={citiesOptions}
                         style={{ width: '100%' }}
                         showSearch
                       />
@@ -1250,12 +1446,14 @@ export default function EventForm() {
                 </Row>
                 <Form.Item className='scheme_blob' name={['stadium', 'scheme_blob']}>
                   <SvgSchemeEditor
+                    value={parsedScheme || undefined}
                     tickets={tickets?.data || []}
-                    hallId={isNew ? null : (stadiumId || data?.event?.stadium?.id || data?.event?.id_stadium)}
+                    hallId={isNew ? (selectedStadiumId || null) : (stadiumId || data?.event?.stadium?.id || data?.event?.id_stadium)}
                     changedPrice={changedPrice}
                     onTicketsChange={val => {
                       setChangedPrice(prev => ({ ...prev, ...val }))
                     }}
+                    allowCreateScheme={false}
                   />
                 </Form.Item>
               </>

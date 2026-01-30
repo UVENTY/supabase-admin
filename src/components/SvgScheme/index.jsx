@@ -19,8 +19,42 @@ const SvgScheme = forwardRef(({
     else if (!src) {
       ref.current.innerHTML = null
       initial.current = null
+    } else {
+      // Убеждаемся, что SVG имеет фон #2a2a2a при загрузке
+      if (src) {
+        try {
+          const parser = new DOMParser()
+          const doc = parser.parseFromString(src, 'image/svg+xml')
+          const svg = doc.querySelector('svg')
+          if (svg) {
+            // Если у SVG нет фона, устанавливаем #2a2a2a
+            const style = svg.getAttribute('style') || ''
+            if (!style.includes('background')) {
+              const currentStyle = style ? style + '; ' : ''
+              svg.setAttribute('style', currentStyle + 'background: #2a2a2a;')
+              const serializer = new XMLSerializer()
+              initial.current = serializer.serializeToString(doc)
+            } else {
+              initial.current = src
+            }
+          } else {
+            initial.current = src
+          }
+        } catch (e) {
+          initial.current = src
+        }
+      }
     }
   }, [src])
+  
+  // Обновляем DOM при изменении initial.current
+  useEffect(() => {
+    if (ref.current && initial.current) {
+      ref.current.innerHTML = initial.current
+    } else if (ref.current && !initial.current) {
+      ref.current.innerHTML = ''
+    }
+  }, [initial.current])
   const handleMouseEvent = useCallback((e, cb) => {
     const { target: el } = e
     if (!el.matches(seatSelector)) return
@@ -73,7 +107,6 @@ const SvgScheme = forwardRef(({
       <div
         ref={ref}
         className={s.svgContainer}
-        dangerouslySetInnerHTML={{ __html: initial.current || '' }}
         onClick={handleClick}
         onDoubleClick={handleDblClick}
         onMouseOver={e => handleMouseEvent(e, handleMouseOver)}
