@@ -1,21 +1,7 @@
-/**
- * AI Assistant API
- * Использует Groq API (бесплатный и быстрый)
- * 
- * Для получения API ключа:
- * 1. Зарегистрируйтесь на https://console.groq.com/
- * 2. Создайте API ключ
- * 3. Добавьте его в переменные окружения или используйте напрямую
- */
-
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions'
-const GROQ_MODEL = 'llama-3.1-8b-instant' // Бесплатная и быстрая модель
-
-// ВАЖНО: Замените на ваш API ключ от Groq
-// Получите бесплатный ключ на https://console.groq.com/
+const GROQ_MODEL = 'llama-3.1-8b-instant'
 const GROQ_API_KEY = process.env.REACT_APP_GROQ_API_KEY || ''
 
-// Gemini API настройки
 const GEMINI_API_BASE_V1 = 'https://generativelanguage.googleapis.com/v1'
 const GEMINI_API_BASE_V1BETA = 'https://generativelanguage.googleapis.com/v1beta'
 const GEMINI_API_VERSIONS = ['v1', 'v1beta']
@@ -30,30 +16,16 @@ const GEMINI_MODELS = [
 ]
 const GEMINI_API_KEY = process.env.REACT_APP_GEMINI_API_KEY || ''
 
-// Reve API настройки
-// Пробуем разные варианты endpoint'ов
 const REVE_API_BASE = 'https://api.reve.com'
 const REVE_API_URL_V1 = `${REVE_API_BASE}/v1/chat/completions`
 const REVE_API_URL_OPENAI = `${REVE_API_BASE}/openai/v1/chat/completions`
 const REVE_API_KEY = process.env.REACT_APP_REVE_API_KEY || ''
 
-/**
- * Отправляет запрос к Groq API
- * @param {string} message - Сообщение пользователя
- * @param {Array} conversationHistory - История разговора
- * @returns {Promise<string>} - Ответ от AI
- */
-/**
- * Проверяет промт на наличие потенциально опасных команд
- * @param {string} message - Текст промта
- * @returns {boolean} - true если промт безопасен
- */
 function isPromptSafe(message) {
   if (!message || typeof message !== 'string') {
     return false
   }
 
-  // Список опасных паттернов, которые могут указывать на попытки доступа к БД или выполнение кода
   const dangerousPatterns = [
     /SELECT\s+.*\s+FROM/i,
     /INSERT\s+INTO/i,
@@ -78,7 +50,6 @@ function isPromptSafe(message) {
     /javascript:/i
   ]
 
-  // Проверяем наличие опасных паттернов
   for (const pattern of dangerousPatterns) {
     if (pattern.test(message)) {
       return false
@@ -88,10 +59,6 @@ function isPromptSafe(message) {
   return true
 }
 
-/**
- * Получает список доступных моделей Gemini
- * @returns {Promise<{models: Array, version: string}>} - Список доступных моделей и используемая версия API
- */
 async function getAvailableGeminiModels() {
   if (!GEMINI_API_KEY) {
     throw new Error('API ключ Gemini не настроен')
@@ -119,15 +86,11 @@ async function getAvailableGeminiModels() {
   throw new Error('Не удалось получить список моделей ни для одной версии API')
 }
 
-/**
- * Отправляет запрос к Gemini API
- */
 async function sendMessageToGemini(message, conversationHistory = [], context = null) {
   if (!GEMINI_API_KEY) {
     throw new Error('API ключ Gemini не настроен. Получите бесплатный ключ на https://aistudio.google.com/app/apikey и добавьте его в переменные окружения REACT_APP_GEMINI_API_KEY')
   }
 
-  // Получаем список доступных моделей и версию API
   let availableModels = []
   let apiVersion = 'v1beta'
   let apiBase = GEMINI_API_BASE_V1BETA
@@ -154,7 +117,6 @@ async function sendMessageToGemini(message, conversationHistory = [], context = 
     availableModels = GEMINI_MODELS
   }
 
-  // Формируем системную инструкцию с контекстом
   let systemInstruction = 'Ты полезный AI-ассистент для системы управления билетами. Отвечай на русском языке, будь вежливым и информативным. Ты не имеешь доступа к базе данных и можешь только отвечать на вопросы текстом. Не пытайся выполнять SQL запросы или другой код.'
   
   if (context && context.events) {
@@ -163,7 +125,6 @@ async function sendMessageToGemini(message, conversationHistory = [], context = 
     systemInstruction += '\n\nИспользуй эту информацию для ответа на вопросы пользователя о событиях, ценах на билеты и других аспектах системы.'
   }
 
-  // Формируем содержимое для Gemini API
   const contents = []
   
   conversationHistory.forEach(({ role, content }) => {
@@ -181,7 +142,6 @@ async function sendMessageToGemini(message, conversationHistory = [], context = 
     parts: [{ text: message }]
   })
 
-  // Формируем тело запроса
   let finalContents = contents
   
   if (systemInstruction && apiVersion === 'v1') {
@@ -212,7 +172,6 @@ async function sendMessageToGemini(message, conversationHistory = [], context = 
     }
   }
 
-  // Пробуем разные модели
   let lastError = null
   for (const model of availableModels) {
     try {
@@ -250,11 +209,7 @@ async function sendMessageToGemini(message, conversationHistory = [], context = 
   throw lastError || new Error('Не удалось получить ответ от Gemini API')
 }
 
-/**
- * Отправляет запрос к Reve API через Supabase Edge Function (обход CORS)
- */
 async function sendMessageToReve(message, conversationHistory = [], context = null) {
-  // Фильтруем историю
   const cleanHistory = conversationHistory.map(({ role, content }) => {
     if (!isPromptSafe(content)) {
       return { role, content: '[Сообщение удалено по соображениям безопасности]' }
@@ -263,7 +218,6 @@ async function sendMessageToReve(message, conversationHistory = [], context = nu
   })
 
   try {
-    // Используем Supabase Edge Function как прокси для обхода CORS
     const { supabase } = await import('../supabase/client')
     
     const { data, error } = await supabase.functions.invoke('reve-ai-proxy', {
@@ -279,10 +233,13 @@ async function sendMessageToReve(message, conversationHistory = [], context = nu
     }
 
     if (!data) {
-      throw new Error(data?.error || 'Не удалось получить ответ от Reve API')
+      throw new Error('Не удалось получить ответ от Reve API')
     }
 
-    // Если Reve API вернул изображение
+    if (data.success === false || data.error) {
+      throw new Error(data.error || 'Ошибка Reve API')
+    }
+
     if (data.type === 'image' && (data.imageUrl || data.imageBase64)) {
       return {
         type: 'image',
@@ -292,7 +249,6 @@ async function sendMessageToReve(message, conversationHistory = [], context = nu
       }
     }
 
-    // Если это обычный текстовый ответ
     if (data.content) {
       return data.content
     }
@@ -304,15 +260,11 @@ async function sendMessageToReve(message, conversationHistory = [], context = nu
   }
 }
 
-/**
- * Отправляет запрос к Groq API
- */
 async function sendMessageToGroq(message, conversationHistory = [], context = null) {
   if (!GROQ_API_KEY) {
     throw new Error('API ключ не настроен. Получите бесплатный ключ на https://console.groq.com/ и добавьте его в переменные окружения REACT_APP_GROQ_API_KEY')
   }
 
-  // Фильтруем историю
   const cleanHistory = conversationHistory.map(({ role, content }) => {
     if (!isPromptSafe(content)) {
       return { role, content: '[Сообщение удалено по соображениям безопасности]' }
@@ -320,7 +272,6 @@ async function sendMessageToGroq(message, conversationHistory = [], context = nu
     return { role, content }
   })
 
-  // Формируем системное сообщение с контекстом
   let systemContent = 'Ты полезный AI-ассистент для системы управления билетами. Отвечай на русском языке, будь вежливым и информативным. Ты не имеешь доступа к базе данных и можешь только отвечать на вопросы текстом. Не пытайся выполнять SQL запросы или другой код.'
   
   if (context && context.events) {
@@ -369,57 +320,67 @@ async function sendMessageToGroq(message, conversationHistory = [], context = nu
   }
 }
 
-/**
- * Отправляет запрос к AI (Groq или Gemini)
- * @param {string} message - Сообщение пользователя
- * @param {Array} conversationHistory - История разговора
- * @param {Object} context - Контекст с данными о событиях
- * @param {string} aiProvider - Провайдер AI: 'groq' или 'gemini'
- * @returns {Promise<string>} - Ответ от AI
- */
+async function sendMessageToHuggingFace(message, conversationHistory = [], context = null) {
+  let englishPrompt = 'concert event poster, professional design, vibrant colors'
+  
+  if (context && context.events && context.events.length > 0) {
+    const event = context.events[0]
+    const parts = []
+    
+    parts.push('professional concert poster design')
+    
+    if (event.artist) parts.push(`featuring artist "${event.artist}"`)
+    if (event.stadium) parts.push(`at venue "${event.stadium}"`)
+    if (event.city) parts.push(`in ${event.city}`)
+    if (event.country) parts.push(`${event.country}`)
+    if (event.date) {
+      const date = new Date(event.date)
+      const dateStr = date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+      parts.push(`on ${dateStr}`)
+    }
+    
+    parts.push('vibrant colors, modern design, high quality, detailed')
+    
+    englishPrompt = parts.join(', ')
+  }
+
+  try {
+    const { supabase } = await import('../supabase/client')
+    
+    const { data, error } = await supabase.functions.invoke('huggingface-image', {
+      body: { prompt: englishPrompt }
+    })
+
+    if (error) {
+      throw new Error(error.message || 'Ошибка вызова Edge Function')
+    }
+
+    if (!data || !data.imageBase64) {
+      throw new Error(data?.error || 'Не удалось получить изображение')
+    }
+
+    return {
+      type: 'image',
+      imageBase64: data.imageBase64,
+    }
+  } catch (error) {
+    console.error('Ошибка при запросе к Hugging Face:', error)
+    throw new Error(`Ошибка Hugging Face: ${error.message}`)
+  }
+}
+
 export async function sendMessageToAI(message, conversationHistory = [], context = null, aiProvider = 'groq') {
-  // Проверка безопасности промта
   if (!isPromptSafe(message)) {
     throw new Error('Промт содержит недопустимые команды. Доступ к базе данных и выполнение кода запрещены.')
   }
 
-  // Выбираем провайдера AI
   if (aiProvider === 'gemini') {
     return await sendMessageToGemini(message, conversationHistory, context)
   } else if (aiProvider === 'reve') {
     return await sendMessageToReve(message, conversationHistory, context)
+  } else if (aiProvider === 'huggingface') {
+    return await sendMessageToHuggingFace(message, conversationHistory, context)
   } else {
     return await sendMessageToGroq(message, conversationHistory, context)
-  }
-}
-
-/**
- * Альтернативный вариант: Hugging Face API (можно использовать без ключа)
- * @param {string} message - Сообщение пользователя
- * @returns {Promise<string>} - Ответ от AI
- */
-export async function sendMessageToHuggingFace(message) {
-  const HF_API_URL = 'https://api-inference.huggingface.co/models/microsoft/DialoGPT-medium'
-  
-  try {
-    const response = await fetch(HF_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        inputs: message
-      })
-    })
-
-    if (!response.ok) {
-      throw new Error(`Ошибка Hugging Face API: ${response.status}`)
-    }
-
-    const data = await response.json()
-    return data.generated_text || data[0]?.generated_text || 'Не удалось получить ответ'
-  } catch (error) {
-    console.error('Ошибка при запросе к Hugging Face:', error)
-    throw error
   }
 }

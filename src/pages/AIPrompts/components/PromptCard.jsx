@@ -100,7 +100,8 @@ export default function PromptCard({
                 options={[
                   { label: 'Gemini (text)', value: 'gemini' },
                   { label: 'Groq (text)', value: 'groq' },
-                  { label: 'Reve (image)', value: 'reve' }
+                  { label: 'Reve (image)', value: 'reve' },
+                  { label: 'FLUX.1 (image)', value: 'huggingface' }
                 ]}
               />
             </div>
