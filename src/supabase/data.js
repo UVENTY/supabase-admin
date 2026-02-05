@@ -1,4 +1,4 @@
-﻿import { supabase } from './client'
+import { supabase } from './client'
 
 export async function getAllData(filters = {}) {
   try {
@@ -212,6 +212,3 @@ export async function getPromocodes() {
     return { data: null, error }
   }
 }
-
-
-

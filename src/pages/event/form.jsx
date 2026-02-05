@@ -2,7 +2,7 @@ import { get } from 'lodash'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useState, useRef } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { fetchData, fetchStadiumScheme, setStadiumScheme, setStadiumSchemeStatus, getStadium, getStadiumSchemeStatus, setData } from '../../redux/data'
+import { fetchData, fetchStadiumScheme, setStadiumScheme, setStadiumSchemeStatus, getStadium, getStadiumSchemeStatus, setData, setTicketsPurchases } from '../../redux/data'
 import { useParams, useNavigate } from 'react-router-dom'
 import { keyBy } from 'lodash'
 import dayjs from 'dayjs'
@@ -288,36 +288,27 @@ export default function EventForm() {
   const currencyList = useSelector(getCurrencyList)
   const defaultCurrency = useSelector(getDefaultCurrency)
   
-  // Получаем выбранную страну из формы для фильтрации городов
   const selectedCountry = Form.useWatch(['stadium', 'country'], form)
   
-  // Фильтруем города по выбранной стране
   const citiesOptions = useMemo(() => {
     if (!selectedCountry) {
       return citiesOptionsBase || []
     }
-    // Фильтруем города, которые принадлежат выбранной стране
     return (citiesOptionsBase || []).filter(city => {
-      // Получаем данные города из объекта citiesData
       const cityId = city.value || city.id
       const cityData = citiesData?.[cityId]
       if (!cityData) return false
       
-      // Поле country в таблице city содержит код страны (ISO 3166-1 alpha-2 code)
-      // Например: 'RU', 'US', 'GB', 'CY' (Cyprus), 'HR' (Croatia)
       const cityCountry = cityData.country
       
-      // Сравниваем код страны города с выбранной страной (приводим к верхнему регистру для сравнения)
       return cityCountry && cityCountry.toUpperCase() === String(selectedCountry).toUpperCase()
     })
   }, [citiesOptionsBase, selectedCountry, citiesData])
   
   const [cities, setCities] = useState(citiesOptions || [])
   
-  // Обновляем список городов при изменении опций из Redux или выбранной страны
   useEffect(() => {
     if (citiesOptions && citiesOptions.length >= 0) {
-      // Убеждаемся, что все значения - строки для режима tags
       const citiesWithStringValues = citiesOptions.map(city => ({
         ...city,
         value: String(city.value || city.id || '')
@@ -358,13 +349,9 @@ export default function EventForm() {
         schemeData = stadium.scheme
       }
       
-      // Убеждаемся, что схема имеет правильную структуру
-      // Если это объект с полем scheme (SVG строка), возвращаем как есть
-      // Если это просто SVG строка, оборачиваем в объект
       if (schemeData && typeof schemeData === 'object' && schemeData.scheme) {
         return schemeData
       } else if (typeof schemeData === 'string') {
-        // Если это просто SVG строка, оборачиваем в объект
         return { scheme: schemeData, categories: [], customProps: [] }
       }
       return schemeData
@@ -374,7 +361,6 @@ export default function EventForm() {
     }
   }, [stadium?.scheme])
   
-  // Отслеживаем изменение схемы и обновляем форму
   useEffect(() => {
     if (!isNew || !selectedStadiumId) return
     if (schemeStatus !== 'loaded') return
@@ -439,7 +425,6 @@ export default function EventForm() {
     })
   }, [isNew, parsedScheme, data?.event?.stadium, form, stadiumId])
   
-  // Устанавливаем выбранный стадион при редактировании существующего события
   useEffect(() => {
     if (isNew || !data?.event?.stadium) return
     
@@ -511,6 +496,33 @@ export default function EventForm() {
     staleTime: 30000, 
     cacheTime: 300000 
   })
+  
+  useEffect(() => {
+    if (!id || isNew || !tickets?.data) return
+    
+    const serializableTickets = tickets.data.map(ticket => {
+      let dateString = null
+      if (ticket.sold_info && ticket.sold_info.date) {
+        if (ticket.sold_info.date && typeof ticket.sold_info.date.format === 'function') {
+          dateString = ticket.sold_info.date.format('YYYY-MM-DD')
+        } else if (typeof ticket.sold_info.date === 'string') {
+          dateString = ticket.sold_info.date
+        } else if (ticket.sold_info.date instanceof Date) {
+          dateString = dayjs(ticket.sold_info.date).format('YYYY-MM-DD')
+        }
+      }
+      
+      return {
+        ...ticket,
+        sold_info: ticket.sold_info ? {
+          ...ticket.sold_info,
+          date: dateString
+        } : null
+      }
+    })
+    
+    dispatch(setTicketsPurchases({ eventId: id, tickets: serializableTickets }))
+  }, [id, isNew, tickets?.data, dispatch])
 
   const lastEventIdRef = useRef(null)
   const restoredPricesRef = useRef(null) 
@@ -990,11 +1002,9 @@ export default function EventForm() {
               setIsSending(false)
               return
             }
-            // Если выбран существующий стадион, используем его ID
             let stadiumId = selectedStadiumId
             
             if (!stadiumId) {
-              // Создаем новый стадион
               const countryId = typeof stadium.country === 'object' ? stadium.country?.id || stadium.country?.value : stadium.country
               const cityId = typeof stadium.city === 'object' ? stadium.city?.id || stadium.city?.value : stadium.city
               
@@ -1028,7 +1038,6 @@ export default function EventForm() {
               }
               stadiumId = createdStadiumResult.data.id_stadium
             } else {
-              // Обновляем существующий стадион, если были изменения
               const countryId = typeof stadium.country === 'object' ? stadium.country?.id || stadium.country?.value : stadium.country
               const cityId = typeof stadium.city === 'object' ? stadium.city?.id || stadium.city?.value : stadium.city
               
@@ -1344,7 +1353,6 @@ export default function EventForm() {
                         options={data?.options?.s || []}
                         onChange={(value) => {
                           if (value === null || value === undefined) {
-                            // Очищаем поля при сбросе выбора
                             setSelectedStadiumId(null)
                             form.setFieldsValue({
                               stadium: {
@@ -1356,17 +1364,13 @@ export default function EventForm() {
                               }
                             })
                           } else {
-                            // Выбран существующий стадион
                             setSelectedStadiumId(value)
                             
-                            // Получаем данные стадиона из всех источников
                             const queryStadiums = queryData?.data?.stadiums || {}
                             const allStadiums = { ...reduxStadiums, ...queryStadiums }
                             const selectedStadium = allStadiums[value]
                             
                             if (selectedStadium) {
-                              // Убеждаемся, что стадион есть в Redux перед загрузкой схемы
-                              // Если стадиона нет в Redux, добавляем его через setData
                               if (!reduxStadiums[value]) {
                                 dispatch(setData({
                                   stadiums: {
@@ -1379,18 +1383,16 @@ export default function EventForm() {
                                 }))
                               }
                               
-                              // Загружаем схему стадиона
                               stadiumIdRef.current = null
                               dispatch(fetchStadiumScheme(value))
                               
-                              // Заполняем поля формы
                               form.setFieldsValue({
                                 stadium: {
                                   en: selectedStadium.name_en || selectedStadium.en || '',
                                   country: selectedStadium.country || null,
                                   city: selectedStadium.id_city || selectedStadium.city || null,
                                   address_en: selectedStadium.address_en || '',
-                                  scheme_blob: null // Будет заполнено после загрузки схемы
+                                  scheme_blob: null 
                                 }
                               })
                             }
@@ -1418,7 +1420,6 @@ export default function EventForm() {
                         style={{ width: '100%' }}
                         showSearch
                         onChange={(value) => {
-                          // При смене страны очищаем выбранный город
                           const stadiumValues = form.getFieldsValue('stadium') || {}
                           form.setFieldsValue({ stadium: { ...stadiumValues, city: null } })
                         }}

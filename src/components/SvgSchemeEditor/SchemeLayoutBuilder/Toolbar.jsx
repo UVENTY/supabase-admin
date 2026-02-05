@@ -25,7 +25,6 @@ const Toolbar = ({
       cancelText: 'Отмена',
       onOk: () => {
         setActiveSection(null)
-        // Очищаем схему
         if (svgRef.current) {
           svgRef.current.innerHTML = ''
           const serializer = new XMLSerializer()
@@ -34,11 +33,9 @@ const Toolbar = ({
             onSchemeChange(svgString)
           }
         }
-        // Очищаем секции в SchemeLayoutBuilder
         if (onDeleteScheme) {
           onDeleteScheme()
         }
-        // Уведомляем родительский компонент об удалении
         if (onSectionsChange) {
           onSectionsChange([])
         }
@@ -47,7 +44,6 @@ const Toolbar = ({
   }
 
   const handleBackToSelection = () => {
-    // Проверяем, есть ли секции на схеме
     if (sections && sections.length > 0) {
       modal.confirm({
         title: 'Выйти из создания схемы?',
@@ -61,7 +57,6 @@ const Toolbar = ({
         }
       })
     } else {
-      // Если секций нет, просто выходим без предупреждения
       if (onBackToSelection) {
         onBackToSelection()
       }
@@ -71,7 +66,6 @@ const Toolbar = ({
   return (
     <div className={s.toolbar}>
       <Space direction="vertical" style={{ width: '100%' }}>
-        {/* Кнопка возврата к выбору режима */}
         {onBackToSelection && (
           <Button
             size='large'
@@ -85,7 +79,6 @@ const Toolbar = ({
           </Button>
         )}
         
-        {/* Кнопки Просмотр и Удалить */}
         <Space style={{ marginTop: '-10px', marginBottom: '10px' }}>
           <Button
             size='large'

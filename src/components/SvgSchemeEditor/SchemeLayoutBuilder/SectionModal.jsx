@@ -13,14 +13,11 @@ const SectionModal = ({
   sections = [],
   onCategoriesChange
 }) => {
-  // Обработчик нажатия Enter для сохранения
   useEffect(() => {
     if (!open) return
 
     const handleKeyDown = (e) => {
-      // Проверяем, что нажата клавиша Enter и не в поле ввода текста
       if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
-        // Проверяем, что фокус не в поле ввода (Input, InputNumber и т.д.)
         const isInput = e.target.tagName === 'INPUT' && e.target.type !== 'button' && e.target.type !== 'submit'
         if (!isInput) {
           e.preventDefault()

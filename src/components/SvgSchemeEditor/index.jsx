@@ -34,22 +34,18 @@ export default function SvgSchemeEditor(props) {
   const [ selectedSeats, setSelectedSeats ] = useState([])
   const [ editProp, setEditProp ] = useState('categories')
   const [ mode, setMode ] = useState(value?.scheme ? MODE_UPLOAD : MODE_UPLOAD)
-  const [savedSections, setSavedSections] = useState(null) // Сохраняем секции при переключении режимов
+  const [savedSections, setSavedSections] = useState(null) 
   const svgRef = useRef()
   
-  // Используем ref для отслеживания предыдущего value, чтобы избежать бесконечных циклов
   const prevValueRef = useRef(value)
   const isInternalUpdateRef = useRef(false)
   
-  // Обновляем схему, категории и customProps при изменении value prop
   useEffect(() => {
-    // Пропускаем обновление, если это внутреннее обновление (из onChange)
     if (isInternalUpdateRef.current) {
       isInternalUpdateRef.current = false
       return
     }
     
-    // Проверяем, действительно ли value изменился
     const valueStr = JSON.stringify(value)
     const prevValueStr = JSON.stringify(prevValueRef.current)
     if (valueStr === prevValueStr) {
@@ -61,7 +57,6 @@ export default function SvgSchemeEditor(props) {
     if (value) {
       if (value.scheme && value.scheme !== scheme) {
         setScheme(value.scheme)
-        // Если схема загружена, переключаемся в режим просмотра только если мы не в режиме создания
         if (mode === MODE_LAYOUT && value.scheme) {
           setMode(MODE_UPLOAD)
         }
@@ -73,7 +68,6 @@ export default function SvgSchemeEditor(props) {
         setCustomProps(value.customProps)
       }
     } else {
-      // Если value пустой, сбрасываем схему и остаемся в режиме выбора
       if (scheme) {
         setScheme('')
       }
@@ -159,7 +153,6 @@ export default function SvgSchemeEditor(props) {
   useEffect(() => {
     if (!svgRef.current) return
     
-    // svgRef может указывать на div, нужно найти SVG внутри
     const svgElement = svgRef.current.querySelector('svg') || svgRef.current
     if (!svgElement || !svgElement.querySelectorAll) return
     
@@ -193,11 +186,9 @@ export default function SvgSchemeEditor(props) {
     })
   }, [tickets])
 
-  // Используем ref для отслеживания предыдущих значений, чтобы избежать бесконечных циклов
   const prevDataRef = useRef({ scheme, categories, customProps })
   
   useEffect(() => {
-    // Проверяем, действительно ли данные изменились
     const currentData = { scheme, categories, customProps }
     const prevData = prevDataRef.current
     
@@ -211,14 +202,12 @@ export default function SvgSchemeEditor(props) {
     
     prevDataRef.current = currentData
     
-    // Устанавливаем флаг, что это внутреннее обновление
     isInternalUpdateRef.current = true
     onChange(currentData)
   }, [scheme, categories, customProps, onChange])
 
   useEffect(() => {
     if (!svgRef.current) return
-    // svgRef может указывать на div, нужно найти SVG внутри
     const svgElement = svgRef.current.querySelector('svg') || svgRef.current
     if (svgElement && svgElement.querySelectorAll) {
       svgElement.querySelectorAll(`.${seatClassName}.${activeSeatClassName}`).forEach(el => el.classList.remove(activeSeatClassName))
@@ -239,7 +228,6 @@ export default function SvgSchemeEditor(props) {
 
   const deleteCategory = useCallback((value) => {
     if (svgRef.current) {
-      // svgRef может указывать на div, нужно найти SVG внутри
       const svgElement = svgRef.current.querySelector('svg') || svgRef.current
       if (svgElement && svgElement.querySelectorAll) {
         Array.from(svgElement.querySelectorAll(`.${seatClassName}[data-category="${value}"]`))
@@ -254,7 +242,7 @@ export default function SvgSchemeEditor(props) {
     setSelectedSeats(prev => {
       if (isDoubleClick) {
         if (!svgRef.current) return prev
-        // svgRef может указывать на div, нужно найти SVG внутри
+
         const svgElement = svgRef.current.querySelector('svg') || svgRef.current
         if (!svgElement || !svgElement.querySelectorAll) return prev
         const cat = el.getAttribute('data-category')
@@ -307,7 +295,7 @@ export default function SvgSchemeEditor(props) {
       cb && cb(null)
       return
     }
-    // svgRef может указывать на div, нужно найти SVG внутри
+
     const svgElement = svgRef.current.querySelector('svg') || svgRef.current
     if (!svgElement) {
       cb && cb(null)
@@ -322,11 +310,9 @@ export default function SvgSchemeEditor(props) {
       const activeElements = node.querySelectorAll(`.${seatClassName}.${activeSeatClassName}`)
       if (activeElements) activeElements.forEach(el => el.classList.remove(activeSeatClassName))
       
-      // Используем XMLSerializer для сохранения полной структуры SVG с атрибутами
       const serializer = new XMLSerializer()
       const newSchemeContent = serializer.serializeToString(node)
       
-      // Обновляем схему только если новый контент не пустой
       if (newSchemeContent && newSchemeContent.trim()) {
         setScheme(newSchemeContent)
       }
@@ -334,7 +320,6 @@ export default function SvgSchemeEditor(props) {
     cb && cb(null)
   }
 
-  // Объединяем defaultCustomProps с customProps, чтобы все поля всегда были доступны
   const allCustomProps = useMemo(() => {
     const defaultValues = defaultCustomProps.map(dcp => dcp.value)
     const merged = [...defaultCustomProps, ...customProps.filter(cp => !defaultValues.includes(cp.value))]
@@ -352,33 +337,25 @@ export default function SvgSchemeEditor(props) {
   
   const handleBuilderChange = useCallback((newScheme) => {
     try {
-      // newScheme уже является полным SVG
       const parser = new DOMParser()
       const doc = parser.parseFromString(newScheme, 'image/svg+xml')
       const svg = doc.querySelector('svg')
       if (svg) {
-        // Извлекаем viewBox и содержимое
         const viewBox = svg.getAttribute('viewBox') || '0 0 1000 800'
         const serializer = new XMLSerializer()
         
-        // Создаем новый SVG с правильной структурой для сохранения
         const newSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
         newSvg.setAttribute('viewBox', viewBox)
         newSvg.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
-        // Устанавливаем фон как при создании схемы (#2a2a2a)
         newSvg.setAttribute('style', 'border: 1px solid #d9d9d9; background: #2a2a2a; user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none;')
         
-        // Копируем все дочерние элементы, исключая временные элементы обводки
         Array.from(svg.children).forEach(child => {
-          // Пропускаем временные элементы обводки (они используются только для редактирования)
           if (child.getAttribute && child.getAttribute('data-temp-overlay') === 'true') {
             return
           }
           newSvg.appendChild(child.cloneNode(true))
         })
         
-        // Добавляем класс .svg-seat для элементов танцпола, которые имеют data-count но не имеют data-seat и data-row
-        // Это нужно для кликабельности танцпола в режиме просмотра
         const dancefloorElements = newSvg.querySelectorAll('[data-count]:not([data-seat]):not([data-row])')
         dancefloorElements.forEach(el => {
           if (!el.classList.contains('svg-seat')) {
@@ -386,18 +363,14 @@ export default function SvgSchemeEditor(props) {
           }
         })
         
-        // Восстанавливаем pointer-events для мест после удаления временных элементов
         const seats = newSvg.querySelectorAll('.svg-seat')
         seats.forEach(el => {
-          // Восстанавливаем pointer-events для мест, чтобы они были кликабельными после сохранения
           el.style.pointerEvents = 'auto'
           
           if (!el.hasAttribute('data-category')) {
-            // Если нет категории, назначаем первую доступную или создаем по умолчанию
             const defaultCategory = categories.length > 0 ? categories[0].value : 'cat1'
             el.setAttribute('data-category', defaultCategory)
             
-            // Если нет категории в списке, добавляем
             if (!categories.find(c => c.value === defaultCategory)) {
               setCategories(prev => [...prev, { 
                 value: defaultCategory, 
@@ -412,12 +385,10 @@ export default function SvgSchemeEditor(props) {
         const processedScheme = serializer.serializeToString(newSvg)
         setScheme(processedScheme)
         
-        // Обновляем категории если нужно (исключаем сцену)
         const newCategories = getCategories(newSvg)
         if (newCategories && newCategories.length > 0) {
           setCategories(prev => {
             const existing = prev.map(c => c.value)
-            // Фильтруем категории, исключая сцену (stage)
             const toAdd = newCategories.filter(c => 
               !existing.includes(c.value) && 
               c.value !== 'stage' && 
@@ -429,7 +400,6 @@ export default function SvgSchemeEditor(props) {
       }
     } catch (e) {
       console.warn('Failed to process builder scheme:', e)
-      // Если не удалось распарсить, пробуем использовать как есть
       setScheme(newScheme)
     }
   }, [categories])
@@ -467,7 +437,6 @@ export default function SvgSchemeEditor(props) {
                 htmlType='button' 
                 icon={<EditOutlined />}
                 onClick={() => {
-                  // Убеждаемся, что customProps содержит все поля из defaultCustomProps при создании схемы
                   if (!customProps || customProps.length === 0) {
                     setCustomProps(defaultCustomProps)
                   } else {
@@ -484,14 +453,6 @@ export default function SvgSchemeEditor(props) {
                 Создать схему
               </Button>
             )}
-            
-            {mode === MODE_LAYOUT && !scheme && (
-              <div style={{ padding: '20px', background: '#fafafa', borderRadius: '8px', border: '1px solid #d9d9d9' }}>
-                <Typography.Text>
-                  Используйте умный редактор для создания схемы зала с автоматической генерацией мест. Добавляйте секции (сцена, танцпол, ряды, балкон) и настраивайте их параметры.
-                </Typography.Text>
-              </div>
-            )}
           </Space>
         )}
         
@@ -506,14 +467,12 @@ export default function SvgSchemeEditor(props) {
               onCategoriesChange={setCategories}
               onViewMode={() => setMode(MODE_UPLOAD)}
               onBackToSelection={() => {
-                // Очищаем все данные и возвращаемся к экрану выбора
                 setScheme('')
                 setSavedSections(null)
                 setCategories([])
                 setCustomProps(defaultCustomProps)
                 setSelectedSeats([])
                 setMode(MODE_UPLOAD)
-                // Очищаем SVG ref, чтобы схема не отображалась
                 if (svgRef.current) {
                   const svgElement = svgRef.current.querySelector('svg') || svgRef.current
                   if (svgElement) {
@@ -527,7 +486,6 @@ export default function SvgSchemeEditor(props) {
           <div className={`${s.root} ${mode === MODE_UPLOAD ? s.viewMode : ''}`}>
             {scheme && mode === MODE_UPLOAD && (
               <>
-                {/* Кнопка "Редактировать" показывается только для созданных схем, не для загруженных */}
                 {savedSections !== null && (
                   <Button
                     size='large'
@@ -622,8 +580,6 @@ export default function SvgSchemeEditor(props) {
               seats={selectedSeats}
               fields={[...defaultCustomProps, ...customProps.filter(cp => !defaultCustomProps.find(dcp => dcp.value === cp.value))]}
               onOk={() => {
-                // Просто очищаем выбранные места, не обновляя схему
-                // Схема уже сохранена и не должна пропадать
                 setSelectedSeats([])
               }}
               onChange={changeSelected}

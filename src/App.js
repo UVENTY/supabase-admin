@@ -15,6 +15,9 @@ import PageTeams from './pages/Teams'
 import PageTemplates from './pages/Templates'
 import PageTournament from './pages/Tournament'
 import PageTournaments from './pages/Tournaments'
+import PageAIAssistant from './pages/AIAssistant'
+import PageAIAssistantEdit from './pages/AIAssistant/edit'
+import PageAIPrompts from './pages/AIPrompts'
 import PageTickets from './pages/Tickets'
 import PageTranslations from './pages/Translations'
 import PageUsers from './pages/Users'
@@ -87,6 +90,9 @@ function App() {
           <Route path="/stadiums/:id" element={<PageStadium />} />
           <Route path="/tournaments" element={<PageTournaments />} />
           <Route path="/tournaments/:id" element={<PageTournament />} />
+          <Route path="/ai-assistant" element={<PageAIAssistant />} />
+          <Route path="/ai-assistant/:id" element={<PageAIAssistantEdit />} />
+          <Route path="/ai-prompts" element={<PageAIPrompts />} />
           <Route path="/tickets/:matchId?" element={<PageTickets />} />
         </Route>
         <Route path="/login" element={<PageLogin />} />

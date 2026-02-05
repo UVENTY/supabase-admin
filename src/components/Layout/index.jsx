@@ -8,6 +8,7 @@ import {
   TrophyOutlined,
   UserOutlined,
   CreditCardOutlined,
+  RobotOutlined,
 } from '@ant-design/icons'
 import {
   Menu,
@@ -35,6 +36,12 @@ const NAVBAR_TOP = [
   }, {
     key: 'tournaments',
     label: <Link to='/tournaments'><TrophyOutlined />&nbsp;&nbsp;Tournaments</Link>,
+  }, {
+    key: 'ai-assistant',
+    label: <Link to='/ai-assistant'><RobotOutlined />&nbsp;&nbsp;AI assistant</Link>,
+  }, {
+    key: 'ai-prompts',
+    label: <Link to='/ai-prompts'><RobotOutlined />&nbsp;&nbsp;AI Prompts</Link>,
   }, {
     key: 'd1',
     label: <Divider type='vertical' />

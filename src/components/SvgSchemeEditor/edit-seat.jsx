@@ -96,7 +96,6 @@ export default function SvgSchemeEditSeat({
   const values = useMemo(() => mapValues(
     seats.reduce((acc, el) => {
       const data = Object.assign({}, el.dataset)
-      // Всегда включаем row и seat для правильного определения типа места
       const keys = ['category', 'row', 'seat'].concat(fieldsToShow.map(f => f.value))
       keys.forEach(field => {
         const val = data[field] || null
@@ -110,8 +109,6 @@ export default function SvgSchemeEditSeat({
 
   const { disabled, category, row, seat, price, count, busyCount } = values
   
-  // Проверяем, есть ли у выбранных мест row и seat (для обычных мест)
-  // Если row и seat - массивы, проверяем, что хотя бы одно место имеет row и seat
   const hasRowAndSeat = Array.isArray(row) ? row.some(r => r && r !== '-1' && r !== null && r !== '') : (row && row !== '-1' && row !== null && row !== '')
   const hasSeat = Array.isArray(seat) ? seat.some(s => s && s !== null && s !== '') : (seat && seat !== null && seat !== '')
   const isRegularSeat = hasRowAndSeat && hasSeat
