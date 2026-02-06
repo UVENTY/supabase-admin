@@ -61,6 +61,7 @@
 .content {
   display: flex;
   margin-top: 20px;
+  scrollbar-gutter: stable;
 }
 .header {
   background: transparent;

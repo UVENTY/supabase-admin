@@ -1,4 +1,4 @@
-﻿import { setLoading, setLoaded, setConfig, setUpdating } from '.'
+import { setLoading, setLoaded, setConfig, setUpdating } from '.'
 import { getConfig } from '../../supabase/config'
 
 export const fetchConfig = async (dispatch) => {

@@ -13,7 +13,6 @@ const SectionForm = ({
 }) => {
   if (!section || !formData) return null
   
-  // Проверяем, является ли это балконом со столом
   const isBalconyWithTable = section.type === SECTION_TYPES.BALCONY && formData.balconyType === 'tables'
   
   return (
@@ -140,7 +139,6 @@ const SectionForm = ({
             <InputNumber
               value={formData.widthPercent || 100}
               onChange={(value) => {
-                // Валидация: минимальная ширина 10%, максимальная 100%
                 const validatedValue = value < 10 ? 10 : (value > 100 ? 100 : value)
                 setFormData({ ...formData, widthPercent: validatedValue })
               }}
@@ -155,7 +153,6 @@ const SectionForm = ({
             <InputNumber
               value={formData.heightPercent || 25}
               onChange={(value) => {
-                // Валидация: минимальная высота 5%
                 const validatedValue = value < 5 ? 5 : value
                 setFormData({ ...formData, heightPercent: validatedValue })
               }}
@@ -174,7 +171,6 @@ const SectionForm = ({
             type="dashed"
             icon={<PlusOutlined />}
             onClick={() => {
-              // Добавляем ряд в временные данные
               const rows = formData.rows || []
               const newRow = {
                 rowNumber: rows.length + 1,
@@ -189,7 +185,6 @@ const SectionForm = ({
           </Button>
           
           {(formData.rows || []).map((row, index) => {
-            // Вычисляем глобальный номер ряда на основе позиции секции и индекса ряда внутри секции
             const rowSectionsBefore = sections.filter(s => s.type === SECTION_TYPES.ROWS && s.id < section.id)
             const rowsCountBefore = rowSectionsBefore.reduce((sum, s) => sum + (s.rows?.length || 0), 0)
             const globalRowNumber = rowsCountBefore + index + 1
@@ -201,7 +196,6 @@ const SectionForm = ({
                   <InputNumber
                     value={row.seatsCount}
                     onChange={(value) => {
-                      // Изменяем ряд в временных данных
                       const rows = [...(formData.rows || [])]
                       if (rows[index]) {
                         rows[index] = { ...rows[index], seatsCount: value }
@@ -218,7 +212,6 @@ const SectionForm = ({
                   size="small"
                   icon={<DeleteOutlined />}
                   onClick={() => {
-                    // Удаляем ряд из временных данных
                     const rows = [...(formData.rows || [])]
                     rows.splice(index, 1)
                     setFormData({ ...formData, rows })
@@ -241,7 +234,6 @@ const SectionForm = ({
               value={formData.balconyType || 'seats'}
               onChange={(e) => {
                 const newType = e.target.value
-                // При смене типа сбрасываем настройки стола, если переключаемся не на столы
                 setFormData({ 
                   ...formData, 
                   balconyType: newType,
@@ -315,7 +307,6 @@ const SectionForm = ({
                   <InputNumber
                     value={formData.widthPercent || 12}
                     onChange={(value) => {
-                      // Валидация: максимальная ширина не должна превышать 50% от ширины SVG
                       const maxWidth = 50
                       const validatedValue = value > maxWidth ? maxWidth : (value < 5 ? 5 : value)
                       setFormData({ ...formData, widthPercent: validatedValue })
@@ -333,7 +324,6 @@ const SectionForm = ({
                   <InputNumber
                     value={formData.heightPercent || 25}
                     onChange={(value) => {
-                      // Валидация: максимальная высота не должна превышать 50% от высоты SVG
                       const maxHeight = 50
                       const validatedValue = value > maxHeight ? maxHeight : (value < 5 ? 5 : value)
                       setFormData({ ...formData, heightPercent: validatedValue })
@@ -378,8 +368,6 @@ const SectionForm = ({
             <Select
               value={formData.shape || 'round'}
               onChange={(value) => {
-                // При смене формы стола сбрасываем количество мест, чтобы они перерисовались
-                // Сохраняем все существующие свойства, включая координаты x и y
                 setFormData({ 
                   ...formData, 
                   shape: value,
@@ -387,7 +375,6 @@ const SectionForm = ({
                   seatsRight: formData.seatsRight || 0,
                   seatsBottom: formData.seatsBottom || 0,
                   seatsLeft: formData.seatsLeft || 0
-                  // x и y сохраняются автоматически через spread оператор
                 })
               }}
               style={{ width: '100%' }}
@@ -398,7 +385,6 @@ const SectionForm = ({
             </Select>
           </FormField>
           
-          {/* Визуальный редактор стола */}
           <FormField label="Количество мест по сторонам">
             <div style={{ 
               display: 'flex', 
@@ -413,7 +399,6 @@ const SectionForm = ({
               minHeight: '130px',
               overflow: 'visible'
             }}>
-              {/* Визуализация стола */}
               <div style={{
                 position: 'relative',
                 width: formData.shape === 'rectangular' ? `${(formData.tableSize || 60) * 2}px` : `${(formData.tableSize || 60) * 2}px`,
@@ -426,8 +411,6 @@ const SectionForm = ({
                 justifyContent: 'center',
                 flexShrink: 0
               }}>
-                {/* Инпуты по сторонам стола - всегда 4 стороны */}
-                {/* Верх */}
                 <div style={{
                   position: 'absolute',
                   top: '-80px',
@@ -449,7 +432,6 @@ const SectionForm = ({
                     placeholder="0"
                   />
                 </div>
-                {/* Право */}
                 <div style={{
                   position: 'absolute',
                   right: '-100px',
@@ -471,7 +453,6 @@ const SectionForm = ({
                     placeholder="0"
                   />
                 </div>
-                {/* Низ */}
                 <div style={{
                   position: 'absolute',
                   bottom: '-80px',
@@ -493,7 +474,6 @@ const SectionForm = ({
                     placeholder="0"
                   />
                 </div>
-                {/* Лево */}
                 <div style={{
                   position: 'absolute',
                   left: '-100px',
@@ -570,7 +550,6 @@ const SectionForm = ({
             />
           </FormField>
           
-          {/* Визуальный редактор дивана */}
           <div style={{ marginBottom: '16px' }}>
             <div style={{ 
               display: 'flex', 
@@ -583,7 +562,6 @@ const SectionForm = ({
               position: 'relative',
               minHeight: '130px'
             }}>
-              {/* Визуализация дивана */}
               <div style={{
                 position: 'relative',
                 width: `${(formData.sofaWidth || 120) * 1.5}px`,
@@ -596,7 +574,6 @@ const SectionForm = ({
                 justifyContent: 'center',
                 flexShrink: 0
               }}>
-                {/* Показываем места внутри дивана */}
                 {(formData.seatsCount || 0) > 0 && (
                   <div style={{
                     position: 'absolute',

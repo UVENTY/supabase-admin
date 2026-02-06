@@ -12,6 +12,7 @@ export const dataSlice = createSlice({
     stadiums: {},
     schedule: {},
     notifications: [],
+    ticketsPurchases: {}, 
   },
   reducers: {
     setLoading: (state, action) => {
@@ -79,6 +80,45 @@ export const dataSlice = createSlice({
       if (isLoading !== undefined) {
         state.stadiums[id].isSchemeLoading = isLoading
       }
+    },
+    setTicketsPurchases: (state, action) => {
+      const { eventId, tickets } = action.payload
+      if (eventId && tickets) {
+        state.ticketsPurchases[String(eventId)] = tickets.map(ticket => {
+          let dateString = null
+          if (ticket.sold_info && ticket.sold_info.date) {
+            if (typeof ticket.sold_info.date === 'string') {
+              dateString = ticket.sold_info.date
+            } else if (ticket.sold_info.date && typeof ticket.sold_info.date.format === 'function') {
+              dateString = ticket.sold_info.date.format('YYYY-MM-DD')
+            } else if (ticket.sold_info.date instanceof Date) {
+              dateString = new Date(ticket.sold_info.date).toISOString().split('T')[0]
+            }
+          }
+          
+          return {
+            section: ticket.section,
+            row: ticket.row,
+            seat: ticket.seat,
+            tariff: ticket.tariff,
+            currency: ticket.currency,
+            status: ticket.status,
+            sold_info: ticket.sold_info ? {
+              user_id: ticket.sold_info.user_id,
+              buy_id: ticket.sold_info.buy_id,
+              date: dateString
+            } : null
+          }
+        })
+      }
+    },
+    clearTicketsPurchases: (state, action) => {
+      const { eventId } = action.payload
+      if (eventId) {
+        delete state.ticketsPurchases[String(eventId)]
+      } else {
+        state.ticketsPurchases = {}
+      }
     }
   },
 })
@@ -93,6 +133,8 @@ export const {
   setStadiumSchemeStatus,
   setNotifications,
   setFetchingNotifications,
+  setTicketsPurchases,
+  clearTicketsPurchases,
 } = dataSlice.actions
 
 export * from './selectors'
